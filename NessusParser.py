@@ -13,6 +13,12 @@ def load_known_issues(filename="known_issues.txt"):
     with open(filename, "r", encoding="utf-8") as f:
         return set(line.strip() for line in f if line.strip())
 
+def sanitize_filename(name):
+    """Replace spaces and illegal filesystem characters"""
+    for ch in [' ', '/', '\\', ':', '*', '?', '"', '<', '>', '|']:
+        name = name.replace(ch, "_")
+    return name
+
 def nessus_to_csv(nessus_file, csv_file):
     """Convert Nessus XML to flat CSV"""
     tree = ET.parse(nessus_file)
@@ -42,7 +48,7 @@ def nessus_to_csv(nessus_file, csv_file):
     print(f"[+] CSV saved as {csv_file}")
 
 def nessus_to_files(nessus_file, out_dir, known_issues_set=None):
-    """Generate per-port text files from Nessus XML"""
+    """Generate per-port text files from Nessus XML (optionally filtered)"""
     tree = ET.parse(nessus_file)
     root = tree.getroot()
     ports = {}
@@ -63,7 +69,31 @@ def nessus_to_files(nessus_file, out_dir, known_issues_set=None):
     for port, ips in ports.items():
         with open(os.path.join(out_dir, f"{port}.txt"), "w") as f:
             f.write("\n".join(sorted(ips)))
-    print(f"[+] Files written to {out_dir}/")
+    print(f"[+] Per-port files written to {out_dir}/")
+
+def nessus_to_files_lookup(nessus_file, out_dir, known_issues_set):
+    """Generate per-plugin files (host:port) from Nessus XML filtered by known_issues.txt"""
+    tree = ET.parse(nessus_file)
+    root = tree.getroot()
+    plugins = {}
+
+    for report_host in root.findall(".//ReportHost"):
+        ip = report_host.attrib.get("name", "")
+        for item in report_host.findall("ReportItem"):
+            port = item.attrib.get("port", "")
+            plugin_title = item.attrib.get("pluginName", "")
+            if not ip or not port or port == "0":
+                continue
+            if plugin_title in known_issues_set:
+                plugins.setdefault(plugin_title, set()).add(f"{ip}:{port}")
+
+    os.makedirs(out_dir, exist_ok=True)
+    for plugin, entries in plugins.items():
+        filename = sanitize_filename(plugin) + ".txt"
+        with open(os.path.join(out_dir, filename), "w") as f:
+            f.write("\n".join(sorted(entries)))
+
+    print(f"[+] Per-plugin files written to {out_dir}/")
 
 def csv_to_files(csv_file, out_dir, known_issues_set=None):
     """Generate per-port text files from CSV"""
@@ -84,7 +114,29 @@ def csv_to_files(csv_file, out_dir, known_issues_set=None):
     for port, ips in ports.items():
         with open(os.path.join(out_dir, f"{port}.txt"), "w") as f:
             f.write("\n".join(sorted(ips)))
-    print(f"[+] Files written to {out_dir}/")
+    print(f"[+] Per-port files written to {out_dir}/")
+
+def csv_to_files_lookup(csv_file, out_dir, known_issues_set):
+    """Generate per-plugin files (host:port) from CSV filtered by known_issues.txt"""
+    plugins = {}
+    with open(csv_file, newline="", encoding="utf-8") as f:
+        reader = csv.DictReader(f)
+        for row in reader:
+            ip = row.get("Host", "").strip()
+            port = row.get("Port", "").strip()
+            plugin_title = row.get("Name", "").strip()
+            if not ip or not port or port == "0":
+                continue
+            if plugin_title in known_issues_set:
+                plugins.setdefault(plugin_title, set()).add(f"{ip}:{port}")
+
+    os.makedirs(out_dir, exist_ok=True)
+    for plugin, entries in plugins.items():
+        filename = sanitize_filename(plugin) + ".txt"
+        with open(os.path.join(out_dir, filename), "w") as f:
+            f.write("\n".join(sorted(entries)))
+
+    print(f"[+] Per-plugin files written to {out_dir}/")
 
 def nessus_to_service_files(nessus_file, out_dir):
     """Generate per-service host:port files"""
@@ -127,16 +179,15 @@ def csv_to_service_files(csv_file, out_dir):
     print(f"[+] Service files written to {out_dir}/")
 
 def main():
-    parser = argparse.ArgumentParser(description="NessusParser - Parse Nessus XML/CSV into CSV and per-port/service files.")
+    parser = argparse.ArgumentParser(description="NessusParser - Parse Nessus XML/CSV into CSV, per-port, per-service, or per-plugin files.")
     parser.add_argument("input_file", help="Input .nessus or .csv file (use input/ folder)")
     parser.add_argument("--to-csv", action="store_true", help="Convert Nessus XML to CSV")
     parser.add_argument("--to-files", action="store_true", help="Generate per-port files")
-    parser.add_argument("--to-files-lookup", action="store_true", help="Generate per-port files filtered by known_issues.txt")
+    parser.add_argument("--to-files-lookup", action="store_true", help="Generate per-plugin files filtered by known_issues.txt")
     parser.add_argument("--to-service", action="store_true", help="Generate per-service files")
     parser.add_argument("--output-dir", default="targets", help="Output directory (default: targets/)")
 
     args = parser.parse_args()
-
     known_issues_set = None
     if args.to_files_lookup:
         known_issues_set = load_known_issues("known_issues.txt")
@@ -152,13 +203,17 @@ def main():
         if args.to_csv:
             csv_file = os.path.join(out_dir, "results.csv")
             nessus_to_csv(input_file, csv_file)
-        if args.to_files or args.to_files_lookup:
-            nessus_to_files(input_file, out_dir, known_issues_set)
+        if args.to_files:
+            nessus_to_files(input_file, out_dir)
+        if args.to_files_lookup:
+            nessus_to_files_lookup(input_file, out_dir, known_issues_set)
         if args.to_service:
             nessus_to_service_files(input_file, out_dir)
     elif input_file.endswith(".csv"):
-        if args.to_files or args.to_files_lookup:
-            csv_to_files(input_file, out_dir, known_issues_set)
+        if args.to_files:
+            csv_to_files(input_file, out_dir)
+        if args.to_files_lookup:
+            csv_to_files_lookup(input_file, out_dir, known_issues_set)
         if args.to_service:
             csv_to_service_files(input_file, out_dir)
     else:
