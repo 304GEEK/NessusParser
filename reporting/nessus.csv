@@ -1,0 +1,6 @@
+Risk,Host,Port,Name,Plugin Output
+High,10.0.0.5,443,SSL Certificate Expiry,Certificate expires in 10 days
+Medium,10.0.0.5,22,Weak SSH Algorithms Supported,SSH server allows weak ciphers
+High,10.0.0.8,80,Apache HTTPD Multiple Vulnerabilities,Several vulnerabilities present
+Medium,10.0.0.8,22,Weak SSH Algorithms Supported,SSH server allows weak ciphers
+
