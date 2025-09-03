@@ -1,7 +1,7 @@
 # NessusParser
 
 **NessusParser** is a collection of Python utilities to convert, filter, and extract information from Nessus `.nessus` and `.csv` scan files.  
-It helps penetration testers and security engineers quickly generate CSV reports, per-port/service target lists, and identify hosts affected by specific plugins.
+It helps penetration testers and security engineers quickly generate CSV reports, per-port/service target lists, and identify hosts affected by specific plugins. The resulting target files will be ingested by various tools.
 
 ---
 
