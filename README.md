@@ -22,7 +22,7 @@ NessusParser/
 ├── input/                # Example Nessus and CSV files
 ├── reporting/            # Example reports and CSV outputs
 ├── targets/              # Generated target files (per-port/service/known issues)
-├── known\_issues.txt      # List of plugin names to match against
+├── known_issues.txt      # List of plugin names to match against
 ├── NessusParser.py       # Main script (with subcommands)
 └── README.md             # This file
 
