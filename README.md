@@ -1,195 +1,195 @@
 # NessusParser
 
-**NessusParser** is a unified Python tool for parsing Nessus `.nessus` XML or `.csv` reports into different useful formats:
-
-* **CSV** summary (`--to-csv`)
-* **Per-port target files** (`--to-files`)
-* **Per-plugin lookup files** (`--to-files-lookup`)
-* **Per-service files** (`--to-service`)
-
-It’s designed to support vulnerability validation, service enumeration, and reporting workflows.
+**NessusParser** is a collection of Python utilities to convert, filter, and extract information from Nessus `.nessus` and `.csv` scan files.  
+It helps penetration testers and security engineers quickly generate CSV reports, per-port/service target lists, and identify hosts affected by specific plugins.
 
 ---
 
 ## Features
-
-* Supports **Nessus XML (`.nessus`)** and **CSV exports**
-* Convert Nessus reports into:
-
-  * Flat CSV files for analysis
-  * Per-port IP lists
-  * Per-plugin host\:port lists (filtered by `known_issues.txt`)
-  * Per-service host\:port lists
-* Configurable output directory (default: `targets/`)
-* Uses `known_issues.txt` for targeted validation
+- Convert `.nessus` XML exports into clean CSV reports.
+- Extract hosts by port or service into text files for further validation.
+- Match findings against a known list of issues (`known_issues.txt`) and generate targeted output.
+- Simple command-line interface with subcommands.
+- Lightweight, pure Python (no external dependencies).
 
 ---
 
-## Repository Layout
+## Repository Structure
 
 ```
-.
-├── NessusParser.py        # Main script (all-in-one)
-├── known_issues.txt       # List of plugin titles to track (for lookup mode)
-├── input/                 # Example Nessus/CSV input files
-├── targets/               # Default output directory for parsing results
-└── reporting/             # Placeholder for reporting scripts or exports
-```
+
+NessusParser/
+├── input/                # Example Nessus and CSV files
+├── reporting/            # Example reports and CSV outputs
+├── targets/              # Generated target files (per-port/service/known issues)
+├── known\_issues.txt      # List of plugin names to match against
+├── NessusParser.py       # Main script (with subcommands)
+└── README.md             # This file
+
+````
 
 ---
 
 ## Installation
 
-Clone the repo and install Python dependencies (only standard library required):
+Clone the repository:
 
 ```bash
 git clone https://github.com/yourusername/NessusParser.git
 cd NessusParser
-```
+````
 
-Python 3.7+ is recommended. No external packages required.
+No external dependencies are required — everything uses the Python standard library.
+Requires **Python 3.7+**.
 
 ---
 
 ## Usage
 
-### Help Menu
+The tool is run from the command line:
 
 ```bash
-python3 NessusParser.py --help
+python3 NessusParser.py <subcommand> [options]
 ```
 
-Example output:
+### Subcommands
 
+#### 1. `to-csv`
+
+Convert a `.nessus` file into a structured CSV report.
+
+```bash
+python3 NessusParser.py to-csv input/example.nessus reporting/report.csv
 ```
-usage: NessusParser.py [-h] [--to-csv] [--to-files] [--to-files-lookup] [--to-service] [--output-dir OUTPUT_DIR] input_file
 
-NessusParser - Parse Nessus XML/CSV into CSV, per-port, per-service, or per-plugin files.
+Output example (`report.csv`):
 
-positional arguments:
-  input_file            Input .nessus or .csv file (use input/ folder)
-
-options:
-  -h, --help            show this help message and exit
-  --to-csv              Convert Nessus XML to CSV
-  --to-files            Generate per-port files
-  --to-files-lookup     Generate per-plugin files filtered by known_issues.txt
-  --to-service          Generate per-service files
-  --output-dir OUTPUT_DIR
-                        Output directory (default: targets/)
-```
+| Risk     | Host     | Port | Name                                | Plugin Output        |
+| -------- | -------- | ---- | ----------------------------------- | -------------------- |
+| High     | 10.0.0.1 | 443  | SSL/TLS Certificate Expired         | Certificate expired… |
+| Critical | 10.0.0.2 | 22   | OpenSSH User Enumeration Vulnerable | Affected version…    |
 
 ---
 
-### 1. Convert Nessus XML to CSV
+#### 2. `to-files`
+
+Split hosts into per-port target files (`targets/`).
 
 ```bash
-python3 NessusParser.py input/scan.nessus --to-csv --output-dir targets/
+python3 NessusParser.py to-files input/report.csv targets/
 ```
 
-Output:
+Example output files:
 
 ```
-targets/results.csv
+targets/
+├── 22.txt
+├── 80.txt
+└── 443.txt
 ```
+
+Each file contains one IP per line.
 
 ---
 
-### 2. Generate Per-Port Target Files
+#### 3. `services`
+
+Split hosts into per-service target files (`targets/`).
 
 ```bash
-python3 NessusParser.py input/scan.csv --to-files --output-dir targets/
+python3 NessusParser.py services input/report.csv targets/
 ```
 
-Output:
+Example output files:
 
 ```
-targets/80.txt
-targets/443.txt
-targets/3389.txt
-...
+targets/
+├── ssh.txt
+├── http.txt
+└── https.txt
 ```
 
-Each file contains a list of IPs with that port open.
+Each file contains `host:port` entries.
 
 ---
 
-### 3. Generate Per-Plugin Lookup Files
+#### 4. `known-issues`
 
-This mode uses **known\_issues.txt** to track specific plugin titles.
-Each output file is named after the plugin (spaces replaced with `_`) and contains `host:port` pairs.
+Match Nessus findings against a list of known plugin names stored in `known_issues.txt`.
+Generates per-plugin output files in `targets/`.
+
+```bash
+python3 NessusParser.py known-issues input/example.nessus targets/
+```
 
 Example `known_issues.txt`:
 
 ```
-SSL Certificate Expiry
-Apache HTTPD Multiple Vulnerabilities
-Weak SSH Algorithms Supported
+SSL/TLS Certificate Expired
+Linux Kernel TCP Sequence Number Generation Weakness
+ICMP Timestamp Response
 ```
 
-Run:
-
-```bash
-python3 NessusParser.py input/scan.nessus --to-files-lookup --output-dir targets/
-```
-
-Output:
+Example output files:
 
 ```
-targets/SSL_Certificate_Expiry.txt
-targets/Apache_HTTPD_Multiple_Vulnerabilities.txt
-targets/Weak_SSH_Algorithms_Supported.txt
+targets/
+├── SSL_TLS_Certificate_Expired.txt
+├── Linux_Kernel_TCP_Sequence_Number_Generation_Weakness.txt
+└── ICMP_Timestamp_Response.txt
 ```
 
-Each file looks like:
+Each file contains:
 
 ```
-10.0.0.5:443
-10.0.0.8:22
+10.0.0.1:443
+10.0.0.2:80
 ```
-
----
-
-### 4. Generate Per-Service Files
-
-```bash
-python3 NessusParser.py input/scan.csv --to-service --output-dir targets/
-```
-
-Output:
-
-```
-targets/ssh.txt
-targets/http.txt
-targets/https.txt
-targets/smb.txt
-```
-
-Each file contains host\:port pairs for that service.
 
 ---
 
 ## Example Workflow
 
-1. Export a `.nessus` or `.csv` file from Nessus
-2. Place it in the `input/` folder
-3. Run one of the parsing commands above
-4. Collect results from the `targets/` folder
-5. Use `reporting/` for custom analysis
+1. Export a `.nessus` file from Nessus.
+
+2. Convert it into CSV:
+
+   ```bash
+   python3 NessusParser.py to-csv input/example.nessus reporting/report.csv
+   ```
+
+3. Extract hosts by port:
+
+   ```bash
+   python3 NessusParser.py to-files reporting/report.csv targets/
+   ```
+
+4. Extract hosts by service:
+
+   ```bash
+   python3 NessusParser.py services reporting/report.csv targets/
+   ```
+
+5. Identify hosts with known issues:
+
+   ```bash
+   python3 NessusParser.py known-issues input/example.nessus targets/
+   ```
 
 ---
 
-## Future Ideas
+## Contributing
 
-* HTML reporting in `reporting/`
-* Integration with **Validator** app
-* JSON export for pipelines
+Pull requests and feature suggestions are welcome.
+If you encounter an issue, please open a GitHub Issue with details and example input.
 
 ---
 
 ## License
 
-MIT License. Use at your own risk.
+This project is licensed under the MIT License.
+
+```
 
 ---
 
