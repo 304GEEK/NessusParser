@@ -1,7 +1,7 @@
 # NessusParser
 
 **NessusParser** is a collection of Python utilities to convert, filter, and extract information from Nessus `.nessus` and `.csv` scan files.  
-It helps penetration testers and security engineers quickly generate CSV reports, per-port/service target lists, and identify hosts affected by specific plugins.
+It helps penetration testers and security engineers quickly generate CSV reports, per-port/service target lists, and identify hosts affected by specific plugins. The resulting target files will be ingested by various tools.
 
 ---
 
@@ -22,7 +22,7 @@ NessusParser/
 ├── input/                # Example Nessus and CSV files
 ├── reporting/            # Example reports and CSV outputs
 ├── targets/              # Generated target files (per-port/service/known issues)
-├── known\_issues.txt      # List of plugin names to match against
+├── known_issues.txt      # List of plugin names to match against
 ├── NessusParser.py       # Main script (with subcommands)
 └── README.md             # This file
 
@@ -39,8 +39,7 @@ git clone https://github.com/yourusername/NessusParser.git
 cd NessusParser
 ````
 
-No external dependencies are required — everything uses the Python standard library.
-Requires **Python 3.7+**.
+Requires **Python 3.7+**. No external dependencies are required.
 
 ---
 
@@ -49,20 +48,20 @@ Requires **Python 3.7+**.
 The tool is run from the command line:
 
 ```bash
-python3 NessusParser.py <subcommand> [options]
+python3 NessusParser.py <.nessus> [options]
 ```
 
 ### Subcommands
 
-#### 1. `to-csv`
+#### 1. `--to-csv`
 
 Convert a `.nessus` file into a structured CSV report.
 
 ```bash
-python3 NessusParser.py to-csv input/example.nessus reporting/report.csv
+python3 NessusParser.py input/input.nessus --to-csv reporting/nessus.csv 
 ```
 
-Output example (`report.csv`):
+Output example (`nessus.csv`):
 
 | Risk     | Host     | Port | Name                                | Plugin Output        |
 | -------- | -------- | ---- | ----------------------------------- | -------------------- |
@@ -71,12 +70,12 @@ Output example (`report.csv`):
 
 ---
 
-#### 2. `to-files`
+#### 2. `--to-files`
 
 Split hosts into per-port target files (`targets/`).
 
 ```bash
-python3 NessusParser.py to-files input/report.csv targets/
+python3 NessusParser.py input/input.nessus --to-files targets/
 ```
 
 Example output files:
@@ -92,12 +91,12 @@ Each file contains one IP per line.
 
 ---
 
-#### 3. `services`
+#### 3. `--to-service`
 
 Split hosts into per-service target files (`targets/`).
 
 ```bash
-python3 NessusParser.py services input/report.csv targets/
+python3 NessusParser.py input/input.nessus --to-service targets/
 ```
 
 Example output files:
@@ -113,13 +112,13 @@ Each file contains `host:port` entries.
 
 ---
 
-#### 4. `known-issues`
+#### 4. `--to-files-known`
 
 Match Nessus findings against a list of known plugin names stored in `known_issues.txt`.
 Generates per-plugin output files in `targets/`.
 
 ```bash
-python3 NessusParser.py known-issues input/example.nessus targets/
+python3 NessusParser.py input/input.nessus --to-files-known  targets/
 ```
 
 Example `known_issues.txt`:
@@ -155,25 +154,25 @@ Each file contains:
 2. Convert it into CSV:
 
    ```bash
-   python3 NessusParser.py to-csv input/example.nessus reporting/report.csv
+   python3 NessusParser.py input/input.nessus --to-csv reporting/nessus.csv
    ```
 
 3. Extract hosts by port:
 
    ```bash
-   python3 NessusParser.py to-files reporting/report.csv targets/
+   python3 NessusParser.py input/input.nessus --to-files  targets/
    ```
 
 4. Extract hosts by service:
 
    ```bash
-   python3 NessusParser.py services reporting/report.csv targets/
+   python3 NessusParser.py input/input.nessus --to-service targets/
    ```
 
 5. Identify hosts with known issues:
 
    ```bash
-   python3 NessusParser.py known-issues input/example.nessus targets/
+   python3 NessusParser.py input/input.nessus --to-files-known targets/
    ```
 
 ---
@@ -190,6 +189,4 @@ If you encounter an issue, please open a GitHub Issue with details and example i
 This project is licensed under the MIT License.
 
 ```
-
----
 
